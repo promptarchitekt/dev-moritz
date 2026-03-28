@@ -239,17 +239,38 @@ button svg{stroke:currentColor;fill:none;}
 /* ══════════ CANVAS ══════════ */
 #canvas-wrap{
   grid-column:2;grid-row:2;
-  position:relative;
+  display:flex;
+  flex-direction:column;
   overflow:hidden;
   background:#fff;
   cursor:crosshair;
   touch-action:none;
   min-height:0;
 }
+/* Rand-Schutz bei Sperre: Malfläche von Display-Kante weg (Web kann Home/Back nicht hart blockieren). */
+#canvas-wrap.edge-guard-active{
+  box-sizing:border-box;
+  padding:max(10px,env(safe-area-inset-top,0px) + 6px) max(10px,env(safe-area-inset-right,0px) + 6px)
+    max(12px,env(safe-area-inset-bottom,0px) + 8px) max(10px,env(safe-area-inset-left,0px) + 6px);
+  background:#cfd3e6;
+}
+#canvas-stage{
+  position:relative;
+  flex:1;
+  min-height:0;
+  width:100%;
+  background:#fff;
+  border-radius:4px;
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.06);
+}
+#canvas-wrap.edge-guard-active #canvas-stage{
+  box-shadow:inset 0 0 0 2px rgba(77,150,255,.35),0 4px 20px rgba(0,0,0,.12);
+}
 #drawing-canvas{
   display:block;
   width:100%;height:100%;
   touch-action:none;
+  border-radius:2px;
 }
 
 /* PARTICLE CANVAS */
@@ -257,6 +278,7 @@ button svg{stroke:currentColor;fill:none;}
   position:absolute;inset:0;
   pointer-events:none;
   width:100%;height:100%;
+  border-radius:2px;
 }
 
 /* ══════════ RIGHT – EFFECTS ══════════ */
@@ -372,6 +394,8 @@ button svg{stroke:currentColor;fill:none;}
 }
 #ufeedback{font-size:14px;color:rgba(255,255,255,.5);min-height:20px;font-family:'Nunito',sans-serif;}
 #uhint{font-size:12px;color:rgba(255,255,255,.25);margin-top:8px;font-family:'Nunito',sans-serif;}
+.parent-edge-hint{font-size:11px;line-height:1.45;color:rgba(255,255,255,.4);margin-top:14px;font-family:'Nunito',sans-serif;font-weight:700;text-align:left;}
+.parent-edge-hint strong{color:rgba(255,255,255,.55);font-weight:900;}
 
 /* LOCKED flash */
 #lock-flash{
@@ -477,6 +501,10 @@ button svg{stroke:currentColor;fill:none;}
     grid-column:1;
     grid-row:2;
   }
+  #canvas-wrap.edge-guard-active{
+    padding:max(16px,env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px) + 12px)
+      max(20px,env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px) + 12px);
+  }
   #right-effects{
     grid-column:1;
     grid-row:4;
@@ -528,7 +556,7 @@ button svg{stroke:currentColor;fill:none;}
       <button type="button" class="top-btn" id="btn-undo" aria-label="Letzten Schritt rückgängig"><i data-lucide="undo-2" aria-hidden="true"></i><span class="btn-label">Zurück</span></button>
       <button type="button" class="top-btn" id="btn-clear" aria-label="Neues Bild"><i data-lucide="trash-2" aria-hidden="true"></i><span class="btn-label">Neu</span></button>
       <button type="button" class="top-btn" id="btn-save" aria-label="Bild speichern"><i data-lucide="save" aria-hidden="true"></i><span class="btn-label">Speichern</span></button>
-      <button type="button" id="lock-btn" aria-label="App sperren"><i data-lucide="lock-open" aria-hidden="true"></i><span class="btn-label">Sperren</span></button>
+      <button type="button" id="lock-btn" aria-label="Rand schützen: Malfläche von Display-Rand absetzen und Vollbild" title="Schützt beim wilden Malen vor versehentlichen Wisch-Gesten zur Task- oder System-Leiste (soweit im Browser möglich). Vollbild + Abstand zum Rand. Eltern-Code zum Beenden."><i data-lucide="lock-open" aria-hidden="true"></i><span class="btn-label">Sperren</span></button>
     </div>
   </div>
 
@@ -559,10 +587,12 @@ button svg{stroke:currentColor;fill:none;}
     <button type="button" id="btn-eraser" aria-label="Radierer"><i data-lucide="eraser" aria-hidden="true"></i><span>Radierer</span></button>
   </div>
 
-  <!-- CANVAS -->
+  <!-- CANVAS (Rand-Schutz bei Sperre: Zeichenfläche von Display-Kante weg) -->
   <div id="canvas-wrap">
-    <canvas id="drawing-canvas"></canvas>
-    <canvas id="particle-canvas"></canvas>
+    <div id="canvas-stage">
+      <canvas id="drawing-canvas"></canvas>
+      <canvas id="particle-canvas"></canvas>
+    </div>
   </div>
 
   <!-- RIGHT: EFFECTS -->
@@ -633,6 +663,7 @@ button svg{stroke:currentColor;fill:none;}
     <div id="ufeedback"></div>
     <button type="button" class="ov-btn ov-gray" id="unlock-cancel" style="margin-top:10px">Abbrechen</button>
     <p id="uhint">Eltern-Code: Rot → Gelb → Blau</p>
+    <p id="parent-edge-hint" class="parent-edge-hint">Hinweis: Home- und Rand-Wischgesten gehören zum Handy – eine Website kann sie nicht vollständig sperren. Zusätzlich helfen z.&nbsp;B. <strong>iPhone: Geführter Zugriff</strong> (Bedienungshilfen) oder <strong>Android: App anheften</strong> / Kinderbereich.</p>
   </div>
 </div>
 
@@ -653,7 +684,8 @@ const pCtx       = pCanvas.getContext('2d');
 const wrap       = document.getElementById('canvas-wrap');
 
 function resizeCanvases(){
-  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const r=drawCanvas.getBoundingClientRect();
+  const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
   // preserve drawing
   const tmp = document.createElement('canvas');
   tmp.width=w; tmp.height=h;
@@ -671,8 +703,34 @@ function resizeCanvases(){
   dCtx.lineCap='round'; dCtx.lineJoin='round';
 }
 
+function setEdgeGuard(on){
+  if(on){
+    wrap.classList.add('edge-guard-active');
+    document.body.classList.add('app-locked');
+  }else{
+    wrap.classList.remove('edge-guard-active');
+    document.body.classList.remove('app-locked');
+  }
+  requestAnimationFrame(()=>resizeCanvases());
+}
+
+function tryOrientationLock(){
+  try{
+    const o=screen.orientation;
+    if(o&&typeof o.lock==='function') o.lock('portrait').catch(()=>{});
+  }catch(e){}
+}
+
+function releaseOrientationLock(){
+  try{
+    const o=screen.orientation;
+    if(o&&typeof o.unlock==='function') o.unlock();
+  }catch(e){}
+}
+
 resizeCanvases();
 window.addEventListener('resize', resizeCanvases);
+window.addEventListener('orientationchange',()=>requestAnimationFrame(()=>resizeCanvases()));
 
 // ══════════════════════════════════════════════
 //  STATE
@@ -1265,24 +1323,36 @@ lockBtn.addEventListener('click',()=>{
 
 function enableLock(){
   S.locked=true;
+  setEdgeGuard(true);
   lockBtn.innerHTML='<i data-lucide="lock" aria-hidden="true"></i><span class="btn-label">Gesperrt</span>';
   lockBtn.classList.add('locked');
+  lockBtn.setAttribute('aria-label','Gesperrt: erneut tippen und Eltern-Code eingeben');
+  lockBtn.setAttribute('title','Rand-Schutz aktiv. Tippe erneut und löse den Eltern-Code.');
   if(typeof lucide!=='undefined') lucide.createIcons();
   const el=document.documentElement;
   const go=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
-  if(go) go.call(el).catch(()=>{});
+  if(go){
+    go.call(el).catch(()=>{});
+    setTimeout(()=>resizeCanvases(),400);
+  }
+  tryOrientationLock();
   showLockFlash();
   playClick();
 }
 
 function disableLock(){
   S.locked=false;
+  releaseOrientationLock();
+  setEdgeGuard(false);
   lockBtn.innerHTML='<i data-lucide="lock-open" aria-hidden="true"></i><span class="btn-label">Sperren</span>';
   lockBtn.classList.remove('locked');
+  lockBtn.setAttribute('aria-label','Rand schützen: Malfläche von Display-Rand absetzen und Vollbild');
+  lockBtn.setAttribute('title','Schützt beim wilden Malen vor versehentlichen Wisch-Gesten zur Task- oder System-Leiste (soweit im Browser möglich). Vollbild + Abstand zum Rand. Eltern-Code zum Beenden.');
   if(typeof lucide!=='undefined') lucide.createIcons();
   const ex=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||document.msExitFullscreen;
   if(ex) ex.call(document).catch(()=>{});
   document.getElementById('unlock-overlay').style.display='none';
+  setTimeout(()=>resizeCanvases(),100);
   playBoom();
   triggerEffect('stars');
 }
@@ -1299,6 +1369,7 @@ function showLockFlash(){
 // Re-lock fullscreen if user exits
 ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange'].forEach(ev=>{
   document.addEventListener(ev,()=>{
+    requestAnimationFrame(()=>resizeCanvases());
     if(S.locked&&!document.fullscreenElement&&!document.webkitFullscreenElement){
       setTimeout(()=>{
         const el=document.documentElement;

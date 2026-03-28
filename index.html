@@ -2,8 +2,10 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="Mal-App für Moritz – Touch, Effekte, Speichern.">
 <title>Moritz malt!</title>
 <style>
@@ -19,14 +21,24 @@
 
 *{margin:0;padding:0;box-sizing:border-box;
   -webkit-user-select:none;user-select:none;
-  -webkit-tap-highlight-color:transparent;
-  touch-action:none;}
+  -webkit-tap-highlight-color:transparent;}
 
-html,body{
-  width:100%;height:100%;
+html{
+  height:100%;
+  height:100dvh;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+body{
+  width:100%;
+  min-height:100%;
+  min-height:100dvh;
+  min-height:100svh;
   background:#1a1a2e;
   font-family:'Fredoka One','Nunito',sans-serif;
   overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:manipulation;
 }
 
 /* ══════════ LAYOUT ══════════ */
@@ -34,7 +46,12 @@ html,body{
   display:grid;
   grid-template-columns: var(--toolbar-w) 1fr var(--effects-w);
   grid-template-rows: var(--top-h) 1fr;
-  width:100vw;height:100vh;
+  width:100%;
+  max-width:100vw;
+  height:100%;
+  max-height:100dvh;
+  max-height:100svh;
+  min-height:0;
 }
 
 /* ══════════ TOP BAR ══════════ */
@@ -46,7 +63,7 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding: 0 18px;
+  padding: max(0px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 0 max(18px,env(safe-area-inset-left));
   z-index:20;
 }
 
@@ -57,7 +74,7 @@ html,body{
   font-family:'Fredoka One',sans-serif;
   font-size:28px;
 }
-#logo span{
+#logo .logo-text{
   background: linear-gradient(90deg,#ff6b9d,#ffd93d,#6bcb77,#4d96ff,#c77dff);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
@@ -226,6 +243,8 @@ button svg{stroke:currentColor;fill:none;}
   overflow:hidden;
   background:#fff;
   cursor:crosshair;
+  touch-action:none;
+  min-height:0;
 }
 #drawing-canvas{
   display:block;
@@ -376,6 +395,127 @@ button svg{stroke:currentColor;fill:none;}
   animation:saveFlash .35s ease-out forwards;
 }
 @keyframes saveFlash{0%{opacity:.9;}100%{opacity:0;}}
+
+/* ══════════ MOBILE (Touch, maximale Zeichenfläche) ══════════ */
+@media (max-width:900px){
+  :root{
+    --toolbar-w:100%;
+    --effects-w:100%;
+    --top-h:auto;
+    --btn-color:52px;
+  }
+  #app{
+    grid-template-columns:1fr;
+    grid-template-rows:auto minmax(0,1fr) auto auto;
+  }
+  #topbar{
+    flex-wrap:wrap;
+    row-gap:8px;
+    padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+    align-items:center;
+  }
+  #logo{font-size:clamp(18px,4.5vw,24px);}
+  #logo svg{width:26px;height:26px;}
+  #logo .logo-long{display:none;}
+  #top-right{
+    flex:1;
+    min-width:0;
+    justify-content:flex-end;
+    gap:6px;
+  }
+  .top-btn,#lock-btn{
+    height:44px;
+    min-width:44px;
+    padding:0 10px;
+    font-size:0;
+    border-radius:14px;
+  }
+  .top-btn .btn-label,#lock-btn .btn-label{display:none;}
+  .top-btn svg,#lock-btn svg{width:24px;height:24px;}
+  #left-toolbar{
+    grid-column:1;
+    grid-row:3;
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-content:flex-start;
+    justify-content:center;
+    align-items:center;
+    padding:10px 10px 8px;
+    gap:8px;
+    border-right:none;
+    border-top:2px solid rgba(255,255,255,0.08);
+    max-height:min(34vh,280px);
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
+  }
+  #left-toolbar .section-label{
+    flex:1 0 100%;
+    text-align:center;
+    margin-top:0;
+    font-size:9px;
+  }
+  #left-toolbar .section-label:nth-of-type(2){margin-top:4px;}
+  .color-btn{
+    width:var(--btn-color);
+    height:var(--btn-color);
+    border-width:3px;
+  }
+  .size-btn{
+    width:56px;
+    height:44px;
+    border-radius:14px;
+  }
+  #btn-eraser{
+    width:64px;
+    height:52px;
+    border-radius:14px;
+  }
+  #btn-eraser span{font-size:9px;}
+  #canvas-wrap{
+    grid-column:1;
+    grid-row:2;
+  }
+  #right-effects{
+    grid-column:1;
+    grid-row:4;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:8px;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+    border-left:none;
+    border-top:2px solid rgba(255,255,255,0.08);
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-x;
+  }
+  #right-effects .section-label{
+    display:none;
+  }
+  .fx-btn{
+    flex:0 0 auto;
+    width:76px;
+    min-width:76px;
+    height:76px;
+    border-radius:18px;
+    padding:4px;
+  }
+  .fx-btn svg{width:32px;height:32px;}
+  .fx-label{font-size:10px;}
+  .overlay-card{
+    padding:28px 22px calc(28px + env(safe-area-inset-bottom,0px));
+    max-height:calc(100dvh - 24px);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .overlay-card h2{font-size:clamp(18px,5vw,22px);flex-wrap:wrap;}
+  #udots{flex-wrap:wrap;gap:10px;}
+  .udot{width:52px;height:52px;}
+}
 </style>
 </head>
 <body>
@@ -383,12 +523,12 @@ button svg{stroke:currentColor;fill:none;}
 
   <!-- TOP BAR -->
   <div id="topbar">
-    <div id="logo"><i data-lucide="palette" aria-hidden="true"></i><span>Moritz malt!</span></div>
+    <div id="logo"><i data-lucide="palette" aria-hidden="true"></i><span class="logo-text"><span class="logo-short">Moritz</span><span class="logo-long"> malt!</span></span></div>
     <div id="top-right">
-      <button type="button" class="top-btn" id="btn-undo" aria-label="Letzten Schritt rückgängig"><i data-lucide="undo-2" aria-hidden="true"></i> Zurück</button>
-      <button type="button" class="top-btn" id="btn-clear" aria-label="Neues Bild"><i data-lucide="trash-2" aria-hidden="true"></i> Neu</button>
-      <button type="button" class="top-btn" id="btn-save" aria-label="Bild speichern"><i data-lucide="save" aria-hidden="true"></i> Speichern</button>
-      <button type="button" id="lock-btn" aria-label="App sperren"><i data-lucide="lock-open" aria-hidden="true"></i> Sperren</button>
+      <button type="button" class="top-btn" id="btn-undo" aria-label="Letzten Schritt rückgängig"><i data-lucide="undo-2" aria-hidden="true"></i><span class="btn-label">Zurück</span></button>
+      <button type="button" class="top-btn" id="btn-clear" aria-label="Neues Bild"><i data-lucide="trash-2" aria-hidden="true"></i><span class="btn-label">Neu</span></button>
+      <button type="button" class="top-btn" id="btn-save" aria-label="Bild speichern"><i data-lucide="save" aria-hidden="true"></i><span class="btn-label">Speichern</span></button>
+      <button type="button" id="lock-btn" aria-label="App sperren"><i data-lucide="lock-open" aria-hidden="true"></i><span class="btn-label">Sperren</span></button>
     </div>
   </div>
 
@@ -700,7 +840,13 @@ drawCanvas.addEventListener('mousedown', mouseDown);
 drawCanvas.addEventListener('mousemove', mouseMove);
 drawCanvas.addEventListener('mouseup',   mouseUp);
 drawCanvas.addEventListener('mouseleave',mouseUp);
-document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('touchmove',function(e){
+  const el=e.target;
+  if(el.closest&&el.closest('#left-toolbar')) return;
+  if(el.closest&&el.closest('#right-effects')) return;
+  if(el.closest&&el.closest('.overlay-card')) return;
+  e.preventDefault();
+},{passive:false});
 
 // ══════════════════════════════════════════════
 //  COLORS
@@ -1119,7 +1265,7 @@ lockBtn.addEventListener('click',()=>{
 
 function enableLock(){
   S.locked=true;
-  lockBtn.innerHTML='<i data-lucide="lock" aria-hidden="true"></i><span>Gesperrt</span>';
+  lockBtn.innerHTML='<i data-lucide="lock" aria-hidden="true"></i><span class="btn-label">Gesperrt</span>';
   lockBtn.classList.add('locked');
   if(typeof lucide!=='undefined') lucide.createIcons();
   const el=document.documentElement;
@@ -1131,7 +1277,7 @@ function enableLock(){
 
 function disableLock(){
   S.locked=false;
-  lockBtn.innerHTML='<i data-lucide="lock-open" aria-hidden="true"></i><span>Sperren</span>';
+  lockBtn.innerHTML='<i data-lucide="lock-open" aria-hidden="true"></i><span class="btn-label">Sperren</span>';
   lockBtn.classList.remove('locked');
   if(typeof lucide!=='undefined') lucide.createIcons();
   const ex=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||document.msExitFullscreen;

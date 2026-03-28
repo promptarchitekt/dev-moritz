@@ -42,6 +42,9 @@
       }
       body {
         width: 100%;
+        height: 100%;
+        height: 100dvh;
+        height: 100svh;
         min-height: 100%;
         min-height: 100dvh;
         min-height: 100svh;
@@ -60,9 +63,9 @@
         width: 100%;
         max-width: 100vw;
         height: 100%;
+        min-height: 0;
         max-height: 100dvh;
         max-height: 100svh;
-        min-height: 0;
       }
 
       /* ══════════ TOP BAR ══════════ */
@@ -189,8 +192,25 @@
         color: #fff;
       }
       #btn-save {
+        position: relative;
+        overflow: hidden;
         background: linear-gradient(135deg, #6bcb77, #16a34a);
         color: #fff;
+        touch-action: none;
+      }
+      #btn-save .save-hold-bar {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 4px;
+        width: 0;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 2px;
+        pointer-events: none;
+        z-index: 2;
+      }
+      #btn-save.save-holding {
+        filter: brightness(1.08);
       }
       #lock-btn {
         height: 48px;
@@ -521,9 +541,7 @@
         align-items: center;
         justify-content: center;
         gap: 10px;
-        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px))
-          max(10px, env(safe-area-inset-left, 0px))
-          max(10px, env(safe-area-inset-right, 0px));
+        padding: 8px 10px;
         background: linear-gradient(180deg, #16213e, #1a1a2e);
         border-bottom: 2px solid rgba(255, 255, 255, 0.08);
         flex-shrink: 0;
@@ -830,23 +848,44 @@
           --effects-w: 100%;
           --top-h: auto;
           --btn-color: 52px;
+          --save-hold-ms: 750ms;
+        }
+        html,
+        body {
+          height: 100dvh;
+          height: 100svh;
+          max-height: 100dvh;
+          max-height: 100svh;
         }
         #app {
           grid-template-columns: 1fr;
           grid-template-rows: auto auto minmax(0, 1fr);
+          height: 100%;
+          min-height: 0;
+          max-height: 100dvh;
+          max-height: 100svh;
+        }
+        #topbar {
+          grid-column: 1;
+          grid-row: 1;
+          flex-shrink: 0;
+          flex-wrap: wrap;
+          row-gap: 6px;
+          padding: max(6px, env(safe-area-inset-top))
+            max(10px, env(safe-area-inset-right)) 6px
+            max(10px, env(safe-area-inset-left));
+          align-items: center;
         }
         .mobile-quick {
           display: flex;
           grid-column: 1;
           grid-row: 2;
+          flex-shrink: 0;
+          padding: 6px 8px;
         }
-        #topbar {
-          flex-wrap: wrap;
-          row-gap: 8px;
-          padding: max(8px, env(safe-area-inset-top))
-            max(12px, env(safe-area-inset-right)) 8px
-            max(12px, env(safe-area-inset-left));
-          align-items: center;
+        .mq-btn {
+          min-height: 46px;
+          padding: 6px 4px;
         }
         #logo {
           font-size: clamp(18px, 4.5vw, 24px);
@@ -931,6 +970,8 @@
         #canvas-wrap {
           grid-column: 1;
           grid-row: 3;
+          min-height: 0;
+          align-self: stretch;
         }
         #canvas-wrap.edge-guard-active {
           padding: max(16px, env(safe-area-inset-top, 0px) + 12px)
@@ -993,8 +1034,10 @@
             type="button"
             class="top-btn"
             id="btn-save"
-            aria-label="Bild speichern"
+            aria-label="Bild speichern, etwa eine Sekunde gedrückt halten"
+            title="Zum Speichern: Taste etwa 1 Sekunde gedrückt halten (kein Doppeltippen)."
           >
+            <span class="save-hold-bar" aria-hidden="true"></span>
             <i data-lucide="save" aria-hidden="true"></i
             ><span class="btn-label">Speichern</span>
           </button>
@@ -1843,9 +1886,18 @@
       });
 
       // ══════════════════════════════════════════════
-      //  SAVE
+      //  SAVE (gedrückt halten – gegen Screenshot-Spammen)
       // ══════════════════════════════════════════════
-      document.getElementById("btn-save").addEventListener("click", () => {
+      const SAVE_HOLD_MS = 750;
+      const SAVE_COOLDOWN_MS = 1400;
+      let saveHoldTimer = null;
+      let saveCooldownUntil = 0;
+      const btnSave = document.getElementById("btn-save");
+      const saveHoldBar = btnSave.querySelector(".save-hold-bar");
+
+      function runSave() {
+        if (Date.now() < saveCooldownUntil) return;
+        saveCooldownUntil = Date.now() + SAVE_COOLDOWN_MS;
         const f = document.getElementById("save-flash");
         f.style.display = "block";
         setTimeout(() => (f.style.display = "none"), 380);
@@ -1855,7 +1907,46 @@
         a.click();
         playBoom();
         triggerEffect("fireworks");
-      });
+      }
+
+      function cancelSaveHold() {
+        if (saveHoldTimer) {
+          clearTimeout(saveHoldTimer);
+          saveHoldTimer = null;
+        }
+        btnSave.classList.remove("save-holding");
+        if (saveHoldBar) {
+          saveHoldBar.style.transition = "none";
+          saveHoldBar.style.width = "0";
+        }
+      }
+
+      function onSavePointerDown(e) {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        cancelSaveHold();
+        btnSave.classList.add("save-holding");
+        if (saveHoldBar) {
+          saveHoldBar.style.transition = "none";
+          saveHoldBar.style.width = "0";
+          void saveHoldBar.offsetWidth;
+          saveHoldBar.style.transition = `width ${SAVE_HOLD_MS}ms linear`;
+          saveHoldBar.style.width = "100%";
+        }
+        saveHoldTimer = setTimeout(() => {
+          saveHoldTimer = null;
+          btnSave.classList.remove("save-holding");
+          if (saveHoldBar) {
+            saveHoldBar.style.transition = "none";
+            saveHoldBar.style.width = "0";
+          }
+          runSave();
+        }, SAVE_HOLD_MS);
+      }
+
+      btnSave.addEventListener("pointerdown", onSavePointerDown);
+      btnSave.addEventListener("pointerup", cancelSaveHold);
+      btnSave.addEventListener("pointerleave", cancelSaveHold);
+      btnSave.addEventListener("pointercancel", cancelSaveHold);
 
       // ══════════════════════════════════════════════
       //  PARTICLE SYSTEM

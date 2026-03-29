@@ -247,6 +247,22 @@
         }
       }
 
+      /* ══════════ HINTERGRUND-TOGGLE ══════════ */
+      #btn-bg-toggle {
+        background: linear-gradient(135deg, #ffd93d, #ff8c00);
+        color: #fff;
+      }
+      body.canvas-dark #btn-bg-toggle {
+        background: linear-gradient(135deg, #4d96ff, #0f3460);
+        color: #fff;
+      }
+      body.canvas-dark #canvas-stage {
+        background: #1a1a2e;
+      }
+      body.canvas-dark #canvas-wrap {
+        background: #1a1a2e;
+      }
+
       /* ══════════ LEFT TOOLBAR – COLORS + SIZES ══════════ */
       #left-toolbar {
         grid-column: 1;
@@ -1045,6 +1061,16 @@
           </button>
           <button
             type="button"
+            class="top-btn"
+            id="btn-bg-toggle"
+            aria-label="Hintergrund hell oder dunkel schalten"
+            title="Malfläche zwischen hellem und dunklem Hintergrund wechseln"
+          >
+            <i data-lucide="sun-moon" aria-hidden="true"></i
+            ><span class="btn-label">Hintergrund</span>
+          </button>
+          <button
+            type="button"
             id="lock-btn"
             aria-label="Rand schützen: Malfläche von Display-Rand absetzen und Vollbild"
             title="Schützt beim wilden Malen vor versehentlichen Wisch-Gesten zur Task- oder System-Leiste (soweit im Browser möglich). Vollbild + Abstand zum Rand. Eltern-Code zum Beenden."
@@ -1445,8 +1471,6 @@
         tmp.width = w;
         tmp.height = h;
         const tCtx = tmp.getContext("2d");
-        tCtx.fillStyle = "#fff";
-        tCtx.fillRect(0, 0, w, h);
         if (drawCanvas.width > 0) tCtx.drawImage(drawCanvas, 0, 0);
 
         drawCanvas.width = w;
@@ -1454,8 +1478,7 @@
         pCanvas.width = w;
         pCanvas.height = h;
 
-        dCtx.fillStyle = "#fff";
-        dCtx.fillRect(0, 0, w, h);
+        dCtx.clearRect(0, 0, w, h);
         dCtx.drawImage(tmp, 0, 0);
         dCtx.lineCap = "round";
         dCtx.lineJoin = "round";
@@ -1867,6 +1890,11 @@
       // ══════════════════════════════════════════════
       document.getElementById("btn-undo").addEventListener("click", undo);
 
+      document.getElementById("btn-bg-toggle").addEventListener("click", () => {
+        document.body.classList.toggle("canvas-dark");
+        playClick();
+      });
+
       // ══════════════════════════════════════════════
       //  CLEAR
       // ══════════════════════════════════════════════
@@ -1881,8 +1909,7 @@
       document.getElementById("clear-yes").addEventListener("click", () => {
         playClick();
         document.getElementById("clear-overlay").style.display = "none";
-        dCtx.fillStyle = "#fff";
-        dCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+        dCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
         saveHistory();
         triggerEffect("confetti");
       });
@@ -1905,7 +1932,14 @@
         setTimeout(() => (f.style.display = "none"), 380);
         const a = document.createElement("a");
         a.download = `moritz-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.png`;
-        a.href = drawCanvas.toDataURL("image/png");
+        const saveCanvas = document.createElement("canvas");
+        saveCanvas.width = drawCanvas.width;
+        saveCanvas.height = drawCanvas.height;
+        const sCtx = saveCanvas.getContext("2d");
+        sCtx.fillStyle = document.body.classList.contains("canvas-dark") ? "#1a1a2e" : "#ffffff";
+        sCtx.fillRect(0, 0, saveCanvas.width, saveCanvas.height);
+        sCtx.drawImage(drawCanvas, 0, 0);
+        a.href = saveCanvas.toDataURL("image/png");
         a.click();
         playBoom();
         triggerEffect("fireworks");

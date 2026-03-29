@@ -1980,6 +1980,11 @@
             pCtx.arc(0, 0, p.r, 0, Math.PI * 2);
             pCtx.fillStyle = p.color;
             pCtx.fill();
+            if (p.strokeColor) {
+              pCtx.strokeStyle = p.strokeColor;
+              pCtx.lineWidth = p.strokeWidth || 2;
+              pCtx.stroke();
+            }
           } else if (p.type === "star5") {
             const or = p.outerR || 14,
               ir = p.innerR || 6;
@@ -2179,8 +2184,9 @@
       function effectBubbles() {
         const W = pCanvas.width,
           H = pCanvas.height;
-        for (let i = 0; i < 55; i++) {
-          const r = rnd(14, 45);
+        for (let i = 0; i < 65; i++) {
+          const r = rnd(18, 58);
+          const hue = rnd(180, 240);
           particles.push({
             type: "circle",
             x: rnd(r, W - r),
@@ -2190,9 +2196,11 @@
             gravity: 0.04,
             drag: 0.99,
             r,
-            color: `hsla(${rnd(180, 220)},80%,75%,0.5)`,
+            color: `hsla(${hue},85%,62%,0.55)`,
+            strokeColor: `hsla(${hue},90%,38%,0.9)`,
+            strokeWidth: 2.5,
             life: 1,
-            decay: rnd(0.005, 0.014),
+            decay: rnd(0.004, 0.010),
             rot: 0,
             rotSpeed: 0,
           });
@@ -2208,8 +2216,8 @@
             vy: rnd(-5, -10),
             gravity: 0.03,
             drag: 0.995,
-            r: r * 0.3,
-            color: "rgba(255,255,255,0.7)",
+            r: r * 0.35,
+            color: "rgba(180,220,255,0.75)",
             life: 1,
             decay: rnd(0.006, 0.016),
             rot: 0,
